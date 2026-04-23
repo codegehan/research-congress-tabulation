@@ -1,0 +1,140 @@
+{
+  "categories": [
+    {
+      "id": "research",
+      "name": "Research Presentation",
+      "subCategories": [
+        {
+          "id": "ai-research",
+          "name": "Artificial Intelligence & Data-Driven Systems"
+        }
+      ]
+    },
+    {
+      "id": "poster",
+      "name": "Poster Presentation",
+      "subCategories": [
+        {
+          "id": "ai-poster",
+          "name": "Artificial Intelligence & Data-Driven Systems"
+        }
+      ]
+    }
+  ],
+  "scoringSettings": {
+    "research": [
+      {
+        "id": "prob_rel",
+        "name": "Problem Relevance & Innovation",
+        "maxScore": 15
+      },
+      {
+        "id": "methodology",
+        "name": "Methodology & Technical Rigor",
+        "maxScore": 20
+      },
+      {
+        "id": "results",
+        "name": "Results & Analysis",
+        "maxScore": 20
+      },
+      {
+        "id": "impact",
+        "name": "AI/Data Application & Impact",
+        "maxScore": 15
+      },
+      {
+        "id": "presentation",
+        "name": "Presentation Skills & Organization",
+        "maxScore": 15
+      },
+      {
+        "id": "qa",
+        "name": "Q&A / Mastery",
+        "maxScore": 15
+      }
+    ],
+    "poster": [
+      {
+        "id": "content",
+        "name": "Research Content & Relevance",
+        "maxScore": 20
+      },
+      {
+        "id": "methodology",
+        "name": "Methodology & Technical Soundness",
+        "maxScore": 20
+      },
+      {
+        "id": "results",
+        "name": "Results & Insights",
+        "maxScore": 15
+      },
+      {
+        "id": "design",
+        "name": "Poster Design & Visual Impact",
+        "maxScore": 15
+      },
+      {
+        "id": "impact",
+        "name": "Application & Impact",
+        "maxScore": 15
+      },
+      {
+        "id": "engagement",
+        "name": "Presenter Engagement & Explanation",
+        "maxScore": 15
+      }
+    ]
+  },
+  "presentations": [
+    {
+      "id": "p1",
+      "title": "Machine Learning Model Development",
+      "presentationTypeId": "research",
+      "subCategoryId": "ai-research",
+      "authors": [
+        {
+          "name": "John Smith",
+          "initials": "JS"
+        },
+        {
+          "name": "Maria Garcia",
+          "initials": "MG"
+        },
+        {
+          "name": "Alex Chen",
+          "initials": "AC"
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "IoT Sensor Integration",
+      "presentationTypeId": "research",
+      "subCategoryId": "iot-research",
+      "authors": [
+        {
+          "name": "Sarah Johnson",
+          "initials": "SJ"
+        },
+        {
+          "name": "Michael Lee",
+          "initials": "ML"
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "AI Implementation Case Study",
+      "presentationTypeId": "poster",
+      "subCategoryId": "ai-poster",
+      "authors": [
+        {
+          "name": "David Kim",
+          "initials": "DK"
+        }
+      ]
+    }
+  ]
+}
