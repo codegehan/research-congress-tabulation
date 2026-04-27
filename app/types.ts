@@ -26,10 +26,19 @@ export interface Presentation {
   presentationTypeId: string;
   subCategoryId: string;
   authors: Author[];
+  details: string;
+}
+
+export interface Judge {
+  id: string;
+  accessCode: string;
+  name: string;
+  credentials: string;
 }
 
 export interface AppData {
   categories: Category[];
   scoringSettings: Record<string, ScoringCriteria[]>;
   presentations: Presentation[];
+  judges?: Judge[];
 }

@@ -18,16 +18,40 @@ import { AppData, Category, SubCategory, Presentation, Author } from '../types';
 
 // ============ Main Dashboard Component ============
 export default function Dashboard() {
-  const [currentUser] = useState({ name: 'John Doe', email: 'john@example.com' });
+  const [currentUser, setCurrentUser] = useState({ name: 'Loading...', email: '' });
+  const [currentJudgeId, setCurrentJudgeId] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [data, setData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
+    const saved = localStorage.getItem('currentJudge');
+    if (saved) {
+      const judge = JSON.parse(saved);
+      setCurrentUser({ name: judge.name, email: judge.credentials });
+      setCurrentJudgeId(judge.id);
+    } else {
+      setCurrentUser({ name: 'Guest', email: '' });
+    }
+  }, []);
+  
+  useEffect(() => {
     fetch('/api/data')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch data');
+        return res.json();
+      })
       .then(d => {
-        setData(d);
+        setData({
+          categories: d.categories || [],
+          scoringSettings: d.scoringSettings || {},
+          presentations: d.presentations || [],
+        });
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load data:', err);
+        setData({ categories: [], scoringSettings: {}, presentations: [] });
         setIsLoading(false);
       });
   }, []);
@@ -58,7 +82,16 @@ export default function Dashboard() {
 
   const selectedPresentation = useMemo(() => {
     if (!data || !selectedTitle) return null;
-    return data.presentations.find((p: Presentation) => p.title === selectedTitle) || { title: selectedTitle, authors: [] as Author[] };
+    return (
+      data.presentations.find((p: Presentation) => p.title === selectedTitle) || {
+        id: '',
+        title: selectedTitle,
+        presentationTypeId: '',
+        subCategoryId: '',
+        authors: [] as Author[],
+        details: '',
+      }
+    );
   }, [data, selectedTitle]);
 
   // Handle scroll for back-to-top button
@@ -162,10 +195,11 @@ export default function Dashboard() {
             ) : selectedPresentation && presentationType ? (
               isScoring ? (
                 <ScoringTabulation
-                  // titleId={}
                   title={selectedPresentation.title}
                   presentationType={presentationType}
-                  criteria={data?.scoringSettings?.[presentationType] || []}
+                  criteria={data?.scoringSettings?.[selectedPresentation.subCategoryId] || []}
+                  judgeId={currentJudgeId || 'unknown'}
+                  judgeName={currentUser.name}
                   onBack={() => setIsScoring(false)}
                 />
               ) : (

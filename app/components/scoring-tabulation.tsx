@@ -1,21 +1,58 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faSave } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faSave, faLock } from '@fortawesome/free-solid-svg-icons';
+import { db } from '@/app/lib/firebase';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 import { ScoringCriteria } from '../types';
+import { toast } from 'react-toastify';
 
 interface ScoringTabulationProps {
   // titleId: string;
   title: string;
   presentationType: string;
   criteria: ScoringCriteria[];
+  judgeId: string;
+  judgeName: string;
   onBack: () => void;
 }
 
-export default function ScoringTabulation({ title, presentationType, criteria, onBack,}: ScoringTabulationProps) {
+export default function ScoringTabulation({ title, presentationType, criteria, judgeId, judgeName, onBack,}: ScoringTabulationProps) {
   const [scores, setScores] = useState<Record<string, number | string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [isLoadingScore, setIsLoadingScore] = useState(true);
+
+  useEffect(() => {
+    const fetchExistingScore = async () => {
+      try {
+        const q = query(
+          collection(db, 'scores'),
+          where('presentationTitle', '==', title),
+          where('judgeId', '==', judgeId)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          setScores(doc.data().scores || {});
+          setIsReadOnly(true);
+        }
+      } catch (error) {
+        console.error('Error fetching existing score:', error);
+      } finally {
+        setIsLoadingScore(false);
+      }
+    };
+
+    if (judgeId && judgeId !== 'unknown') {
+      fetchExistingScore();
+    } else {
+      setIsLoadingScore(false);
+    }
+  }, [title, judgeId]);
 
   const handleScoreChange = (id: string, value: string, maxScore: number) => {
+    if (isReadOnly) return;
     let numValue = parseInt(value, 10);
     if (isNaN(numValue)) {
       setScores((prev) => ({ ...prev, [id]: '' }));
@@ -33,23 +70,48 @@ export default function ScoringTabulation({ title, presentationType, criteria, o
     }, 0);
   }, [scores, criteria]);
 
-  const handleSubmit = () => {
-    const submissionData = {
-      presentationTitle: title,
-      presentationType: presentationType,
-      scores: scores,
-      totalScore: totalScore,
-      submittedAt: new Date().toISOString()
-    };
-    
-    console.log(JSON.stringify(submissionData, null, 2));
-    
-    // TODO: Put the saving of json data of scores here (e.g., fetch/API call to backend)
+  const handleSubmit = async () => {
+    if (isReadOnly) return;
+    setIsSubmitting(true);
+    try {
+      const submissionData = {
+        presentationTitle: title,
+        presentationType: presentationType,
+        judgeId: judgeId,
+        judgeName: judgeName,
+        scores: scores,
+        totalScore: totalScore,
+        submittedAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, 'scores'), submissionData);
+      toast.success('Score submitted successfully!');
+      setIsReadOnly(true);
+    } catch (error) {
+      console.error('Error submitting score:', error);
+      toast.error('Failed to submit score. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  if (isLoadingScore) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-12 text-center border border-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 border border-gray-100 animate-fade-in">
-      <div className="flex items-center justify-between mb-6 border-b pb-4">
+    <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 border border-gray-100 animate-fade-in relative">
+      {isReadOnly && (
+        <div className="absolute top-4 right-4 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
+          <FontAwesomeIcon icon={faLock} />
+          Read Only (Already Scored)
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-6 border-b pb-4 mt-2">
         <div>
           <button
             onClick={onBack}
@@ -72,7 +134,7 @@ export default function ScoringTabulation({ title, presentationType, criteria, o
             Total Score
           </span>
           <span className="text-3xl font-bold text-gray-900">{totalScore}</span>
-          <span className="text-gray-500 text-sm ml-1">/ 100</span>
+          <span className="text-gray-500 text-sm ml-1">/ {criteria.reduce((sum, c) => sum + c.maxScore, 0)}</span>
         </div>
       </div>
 
@@ -111,10 +173,11 @@ export default function ScoringTabulation({ title, presentationType, criteria, o
       <div className="mt-8 pt-6 border-t flex justify-end">
         <button 
           onClick={handleSubmit}
-          className="bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-600 hover:to-purple-600 text-white font-poppins font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 group"
+          disabled={isSubmitting || isReadOnly}
+          className="bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-poppins font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 group"
         >
           <FontAwesomeIcon icon={faSave} className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          Submit Evaluation
+          {isSubmitting ? 'Submitting...' : 'Submit Evaluation'}
         </button>
       </div>
     </div>

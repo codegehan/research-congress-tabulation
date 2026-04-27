@@ -17,7 +17,8 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
       title: 'New Presentation Title',
       presentationTypeId: localData.categories[0]?.id || '',
       subCategoryId: localData.categories[0]?.subCategories[0]?.id || '',
-      authors: [{ name: 'Author Name', initials: 'AN' }]
+      authors: [{ name: 'Author Name', initials: 'AN' }],
+      details: 'Presentation Details'
     };
     setLocalData({ ...localData, presentations: [...localData.presentations, newPres] });
   };
@@ -83,7 +84,7 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
           return (
             <div key={pres.id} className="bg-white p-6 rounded-lg shadow border border-gray-200">
               <div className="flex justify-between items-start mb-4">
-                <input 
+                <input
                   value={pres.title}
                   onChange={e => updatePresentation(pres.id, 'title', e.target.value)}
                   className="text-xl font-bold border-b border-gray-300 focus:border-orange-500 outline-none flex-1 mr-4 py-1"
@@ -97,7 +98,7 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Presentation Type</label>
-                  <select 
+                  <select
                     value={pres.presentationTypeId}
                     onChange={e => {
                       const newType = e.target.value;
@@ -112,7 +113,7 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Category</label>
-                  <select 
+                  <select
                     value={pres.subCategoryId}
                     onChange={e => updatePresentation(pres.id, 'subCategoryId', e.target.value)}
                     className="w-full border border-gray-300 rounded px-3 py-2"
@@ -122,19 +123,32 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 </div>
               </div>
 
+              <div className="grid mb-6">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Details</label>
+                  <textarea
+                    value={pres.details}
+                    onChange={e => updatePresentation(pres.id, 'details', e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  >
+                    {pres.details}
+                  </textarea>
+                </div>
+              </div>
+
               <div className="border-t pt-4">
                 <h4 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wider">Researchers / Authors</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {pres.authors.map((author: Author, idx: number) => (
                     <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
                       <FontAwesomeIcon icon={faUser} className="text-gray-400" />
-                      <input 
+                      <input
                         value={author.name}
                         onChange={e => updateAuthor(pres.id, idx, 'name', e.target.value)}
                         className="flex-1 bg-transparent border-none focus:ring-0 text-sm"
                         placeholder="Name"
                       />
-                      <input 
+                      <input
                         value={author.initials}
                         onChange={e => updateAuthor(pres.id, idx, 'initials', e.target.value)}
                         className="w-12 bg-transparent border-none focus:ring-0 text-sm uppercase text-center font-semibold"

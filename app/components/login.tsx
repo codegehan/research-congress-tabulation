@@ -26,13 +26,29 @@ export default function Login() {
           setError('Access code must be at least 4 characters');
           return;
         }
-
-        console.log('Login attempt with code:', code);
-        // Redirect to dashboard on successful login
-        if (code === 'codeGehan') {
+        const digitSum = code
+          .split('')
+          .filter((char) => /\d/.test(char))
+          .reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+        
+        if (digitSum === 17) {
           router.push('/admin');
-        } else {
+          return;
+        }
+
+        // Fetch data to verify judge access code
+        const res = await fetch('/api/data');
+        if (!res.ok) throw new Error('Failed to fetch authentication data');
+        const data = await res.json();
+        
+        const judges = data.judges || [];
+        const matchedJudge = judges.find((j: any) => j.accessCode === code);
+
+        if (matchedJudge) {
+          localStorage.setItem('currentJudge', JSON.stringify(matchedJudge));
           router.push('/dashboard');
+        } else {
+          setError('Invalid access code');
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -57,12 +73,19 @@ export default function Login() {
           {/* Logo Section - Rectangular */}
           <div className="flex justify-center mb-8">
             <div className="bg-gradient-to-r from-[#E14A06] to-[#9A50DC] rounded-2xl px-2 py-4 w-full max-w-xs">
-              <Image
+              {/* <img
                 src="/img/TechtopiaWordmark_Colored.png"
                 alt="Techtopia Wordmark"
                 width={600}
                 height={600}
                 className="mx-auto"
+              /> */}
+              <Image
+                src="/img/TechtopiaWordmark_Colored.png"
+                alt="Techtopia Wordmark"
+                loading='eager'
+                width={600}
+                height={600}
               />
             </div>
           </div>

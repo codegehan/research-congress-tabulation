@@ -1,11 +1,9 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy } from '@fortawesome/free-solid-svg-icons';
+import { Presentation } from '../types';
 
 interface PresentationDetailsProps {
-  presentation: {
-    title: string;
-    authors: { name: string; initials: string }[];
-  };
+  presentation: Presentation;
   onScoringClick: () => void;
 }
 
@@ -37,9 +35,7 @@ export default function PresentationDetails({
 
           <div className="space-y-4">
             <p className="font-poppins text-gray-600 leading-relaxed">
-              This is detailed information about <strong>{presentation.title}</strong>. You
-              can view and manage all relevant details here including evaluation
-              criteria, scoring guidelines, and submission requirements.
+              {presentation.details}
             </p>
 
             <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">

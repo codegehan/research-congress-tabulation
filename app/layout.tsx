@@ -22,6 +22,9 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "CCS - Research Congress 2026",
   description: "A comprehensive digital platform for the CCS Research Congress 2026, facilitating presentation management, judging, scoring, and real-time results tabulation.",
+  icons: {
+    icon: "/img/Techtopia_World.png",
+  },
 };
 
 export default function RootLayout({
@@ -36,9 +39,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-poppins">
         {children}
-        <ToastContainer position='top-center' autoClose={2000} />  
+        <ToastContainer position='top-center' autoClose={2000} />
       </body>
-      
+
     </html>
   );
 }

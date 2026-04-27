@@ -8,8 +8,10 @@ import { useRouter } from 'next/navigation';
 import CategoriesManager from './categories-manager';
 import ScoringManager from './scoring-manager';
 import PresentationsManager from './presentations-manager';
+import JudgesManager from './judges-manager';
 import { AppData } from '../types';
 import { toast } from 'react-toastify';
+import ResultsSummary from './results-summary';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -18,10 +20,24 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     fetch('/api/data')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch data');
+        return res.json();
+      })
       .then(d => {
-        setData(d);
+        setData({
+          categories: d.categories || [],
+          scoringSettings: d.scoringSettings || {},
+          presentations: d.presentations || [],
+          judges: d.judges || [],
+        });
         setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load data:', err);
+        setData({ categories: [], scoringSettings: {}, presentations: [], judges: [] });
+        setIsLoading(false);
+        toast.error('Failed to load data from server');
       });
   }, []);
 
@@ -50,9 +66,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavBar currentUser={{ name: 'Admin User', email: 'admin@codegehan.com' }} />
+      <NavBar currentUser={{ name: '!%#*&$^#@(*&#$', email: 'sudo@admin.com' }} />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center mb-8 gap-4">
+        <div className="flex items-center mb-8 gap-4 print:hidden">
            <button 
              onClick={() => router.push('/dashboard')} 
              className="text-gray-500 hover:text-orange-600 flex items-center gap-2 font-medium"
@@ -60,13 +76,15 @@ export default function AdminDashboard() {
              <FontAwesomeIcon icon={faArrowLeft} /> Back to Dashboard
            </button>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Administrator Panel</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 print:hidden">Administrator Panel</h1>
         {/* Tabs */}
-        <div className="flex space-x-8 mb-8 border-b">
+        <div className="flex space-x-8 mb-8 border-b print:hidden">
           {[
             { id: 'categories', label: 'Categories' },
             { id: 'scoring', label: 'Scoring Setup' },
-            { id: 'presentations', label: 'Presentations & Researchers' }
+            { id: 'presentations', label: 'Presentations' },
+            { id: 'judges', label: 'Judges' },
+            { id: 'results', label: 'Results Summary' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -83,6 +101,8 @@ export default function AdminDashboard() {
           {activeTab === 'categories' && <CategoriesManager data={data} onSave={saveData} />}
           {activeTab === 'scoring' && <ScoringManager data={data} onSave={saveData} />}
           {activeTab === 'presentations' && <PresentationsManager data={data} onSave={saveData} />}
+          {activeTab === 'judges' && <JudgesManager data={data} onSave={saveData} />}
+          {activeTab === 'results' && <ResultsSummary data={data} />}
         </div>
       </div>
     </div>
