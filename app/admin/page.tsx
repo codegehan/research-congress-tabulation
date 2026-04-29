@@ -18,6 +18,19 @@ export default function AdminDashboard() {
   const [data, setData] = useState<AppData | null>(null);
   const [activeTab, setActiveTab] = useState('categories');
   const [isLoading, setIsLoading] = useState(true);
+  const [adminUser, setAdminUser] = useState({ name: 'Loading...', email: '' });
+
+  useEffect(() => {
+    const adminData = localStorage.getItem('currentAdmin');
+    try {
+      const admin = JSON.parse(adminData || '{}');
+      setAdminUser({ name: admin.name, email: "sudo@gmail.com" });
+    } catch (error) {
+      console.error('Failed to parse admin data:', error);
+      window.location.href = '/';
+    }
+  }, []);
+
   useEffect(() => {
     fetch('/api/data')
       .then(res => {
@@ -66,7 +79,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavBar currentUser={{ name: '!%#*&$^#@(*&#$', email: 'sudo@admin.com' }} />
+      <NavBar currentUser={{ name: adminUser.name, email: adminUser.email }} />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center mb-8 gap-4 print:hidden">
            <button 

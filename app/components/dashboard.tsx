@@ -5,8 +5,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBook,
   faLayerGroup,
-  faBuilding,
-  faTrophy,
   faArrowUp,
 } from '@fortawesome/free-solid-svg-icons';
 import NavBar from './navbar';
@@ -23,19 +21,25 @@ export default function Dashboard() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [data, setData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [isAuthed, setIsAuthed] = useState(false);
+
   useEffect(() => {
-    const saved = localStorage.getItem('currentJudge');
-    if (saved) {
-      const judge = JSON.parse(saved);
+    const judgeData = localStorage.getItem('currentJudge');
+    try {
+      const judge = JSON.parse(judgeData || '{}');
       setCurrentUser({ name: judge.name, email: judge.credentials });
       setCurrentJudgeId(judge.id);
-    } else {
-      setCurrentUser({ name: 'Guest', email: '' });
+      setIsAuthed(true);
+    } catch (error) {
+      console.error('Failed to parse judge data:', error);
+      window.location.href = '/';
     }
   }, []);
   
   useEffect(() => {
+    if (!isAuthed) {
+      return;
+    }
     fetch('/api/data')
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch data');
@@ -54,7 +58,7 @@ export default function Dashboard() {
         setData({ categories: [], scoringSettings: {}, presentations: [] });
         setIsLoading(false);
       });
-  }, []);
+  }, [isAuthed]);
   
   // Presentation state
   const [openPresentations, setOpenPresentations] = useState<Set<string>>(new Set());
@@ -147,6 +151,11 @@ export default function Dashboard() {
   const toggleCategory = useCallback((catId: string) => {
     setExpandedCategory((prev) => (prev === catId ? null : catId));
   }, []);
+
+  // Don't render anything until authentication is verified
+  if (!isAuthed) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
