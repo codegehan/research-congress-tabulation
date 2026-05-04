@@ -28,6 +28,11 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
     setLocalData({ ...localData, presentations: newList });
   };
 
+  const updatePresentationMultiple = (id: string, updates: Record<string, any>) => {
+    const newList = localData.presentations.map((p: Presentation) => p.id === id ? { ...p, ...updates } : p);
+    setLocalData({ ...localData, presentations: newList });
+  };
+
   const removePresentation = (id: string) => {
     const newList = localData.presentations.filter((p: Presentation) => p.id !== id);
     setLocalData({ ...localData, presentations: newList });
@@ -103,8 +108,11 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                     onChange={e => {
                       const newType = e.target.value;
                       const newSubs = localData.categories.find((c: any) => c.id === newType)?.subCategories || [];
-                      updatePresentation(pres.id, 'presentationTypeId', newType);
-                      updatePresentation(pres.id, 'subCategoryId', newSubs[0]?.id || '');
+                      console.log('Selected Type:', newType, 'Available Subcategories:', newSubs);
+                      updatePresentationMultiple(pres.id, {
+                        presentationTypeId: newType,
+                        subCategoryId: newSubs[0]?.id || ''
+                      });
                     }}
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   >
