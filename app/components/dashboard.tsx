@@ -89,7 +89,7 @@ export default function Dashboard() {
   const selectedPresentation = useMemo(() => {
     if (!data || !selectedTitle) return null;
     return (
-      data.presentations.find((p: Presentation) => p.title === selectedTitle) || {
+      data.presentations.find((p: Presentation) => p.title.toUpperCase() === selectedTitle?.toUpperCase()) || {
         id: '',
         title: selectedTitle,
         presentationTypeId: '',
