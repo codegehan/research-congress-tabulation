@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faSave, faUser, faSearch, faChevronDown, faChevronUp, faTimes, faFileAlt, faLayerGroup, faFolderOpen, faAlignLeft, faUsers, faCheck } from '@fortawesome/free-solid-svg-icons';
 
@@ -12,7 +12,23 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const handleSave = () => onSave(localData);
+  const handleSave = useCallback(() => onSave(localData), [localData, onSave]);
+
+  // Keyboard shortcuts: Ctrl + "+" to add, Ctrl + S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === '`')) {
+        e.preventDefault();
+        setShowAddModal(true);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
 
   const addPresentation = () => {
     const newPres = {
@@ -106,14 +122,18 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:from-orange-600 hover:to-orange-700 transition-all duration-200 text-sm"
+            title="Add New Presentation (Ctrl + `)"
           >
             <FontAwesomeIcon icon={faPlus} /> Add New
+            <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 rounded border border-white/30">Ctrl `</kbd>
           </button>
           <button
             onClick={handleSave}
             className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 text-sm"
+            title="Save All (Ctrl + S)"
           >
             <FontAwesomeIcon icon={faSave} /> Save All
+            <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 rounded border border-white/30">Ctrl S</kbd>
           </button>
         </div>
       </div>
@@ -153,11 +173,10 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
           return (
             <div
               key={pres.id}
-              className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${
-                isExpanded
+              className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded
                   ? 'border-orange-300 shadow-lg shadow-orange-50 ring-1 ring-orange-100'
                   : 'border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200'
-              }`}
+                }`}
             >
               {/* Collapsed Header */}
               <div
