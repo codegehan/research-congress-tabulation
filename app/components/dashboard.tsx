@@ -35,7 +35,7 @@ export default function Dashboard() {
       window.location.href = '/';
     }
   }, []);
-  
+
   useEffect(() => {
     if (!isAuthed) {
       return;
@@ -59,7 +59,7 @@ export default function Dashboard() {
         setIsLoading(false);
       });
   }, [isAuthed]);
-  
+
   // Presentation state
   const [openPresentations, setOpenPresentations] = useState<Set<string>>(new Set());
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -80,6 +80,8 @@ export default function Dashboard() {
         titles: (data.presentations || [])
           .filter((p: Presentation) => p.presentationTypeId === cat.id && p.subCategoryId === sub.id)
           .map((p: Presentation) => p.title)
+          .sort((a: string, b: string) => a.localeCompare(b))
+          .map((title: string) => title.toUpperCase()),
       }))
     }));
   }, [data]);
@@ -189,7 +191,7 @@ export default function Dashboard() {
                       onSelectTitle={(title) => handleSelectTitle(title, presentation.id as 'research' | 'poster')}
                       colorClass="bg-orange-50"
                     />
-      
+
                   ))}
                 </AccordionSection>
               ))}
