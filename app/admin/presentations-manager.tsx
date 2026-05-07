@@ -214,18 +214,34 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
             if (catPresentations.length === 0) return null;
 
             return (
-              <div key={cat.id} className="space-y-4">
+              <div key={cat.id} className="space-y-6">
                 <h3 className="text-xl font-bold text-gray-800 border-b border-gray-200 pb-2 flex items-center gap-2">
                   <FontAwesomeIcon icon={faLayerGroup} className="text-orange-500 text-lg" />
                   {cat.name} Presentations
                 </h3>
-                <div className="space-y-3">
-                  {catPresentations.map((pres: Presentation, index: number) => {
-                    const isExpanded = expandedId === pres.id;
-                    const typeOptions = localData.categories;
-                    const subOptions = localData.categories.find((c: Category) => c.id === pres.presentationTypeId)?.subCategories || [];
+                
+                <div className="space-y-6 pl-2 md:pl-4">
+                  {(cat.subCategories || []).map((subCat: SubCategory) => {
+                    let subCatPresentations = catPresentations.filter((p: Presentation) => p.subCategoryId === subCat.id);
+                    
+                    if (subCatPresentations.length === 0) return null;
+
+                    // Sort alphabetically by title
+                    subCatPresentations = subCatPresentations.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
                     return (
+                      <div key={subCat.id} className="space-y-3">
+                        <h4 className="text-md font-semibold text-gray-700 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faFolderOpen} className="text-blue-500 text-sm" />
+                          {subCat.name}
+                        </h4>
+                        <div className="space-y-3 pl-2 md:pl-4 border-l-2 border-blue-100">
+                          {subCatPresentations.map((pres: Presentation, index: number) => {
+                            const isExpanded = expandedId === pres.id;
+                            const typeOptions = localData.categories;
+                            const subOptions = localData.categories.find((c: Category) => c.id === pres.presentationTypeId)?.subCategories || [];
+
+                            return (
             <div
               key={pres.id}
               className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded
@@ -238,9 +254,9 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
                 onClick={() => setExpandedId(isExpanded ? null : pres.id)}
               >
-                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-bold text-sm flex items-center justify-center">
+                {/* <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-bold text-sm flex items-center justify-center">
                   {index + 1}
-                </span>
+                </span> */}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate text-sm">{pres.title || 'Untitled'}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -439,6 +455,10 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 </div>
               )}
             </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
