@@ -22,6 +22,7 @@ export interface Author {
 
 export interface Presentation {
   id: string;
+  contestantNo: string;
   title: string;
   presentationTypeId: string;
   subCategoryId: string;

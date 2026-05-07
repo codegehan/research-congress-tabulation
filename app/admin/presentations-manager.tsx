@@ -11,6 +11,8 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [newPresTypeId, setNewPresTypeId] = useState<string>('');
+  const [newPresSubId, setNewPresSubId] = useState<string>('');
 
   const handleSave = useCallback(() => onSave(localData), [localData, onSave]);
 
@@ -19,6 +21,8 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === '`')) {
         e.preventDefault();
+        setNewPresTypeId(localData.categories[0]?.id || '');
+        setNewPresSubId(localData.categories[0]?.subCategories[0]?.id || '');
         setShowAddModal(true);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -33,9 +37,10 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
   const addPresentation = () => {
     const newPres = {
       id: Date.now().toString(),
+      contestantNo: '#',
       title: 'New Presentation Title',
-      presentationTypeId: localData.categories[0]?.id || '',
-      subCategoryId: localData.categories[0]?.subCategories[0]?.id || '',
+      presentationTypeId: newPresTypeId || localData.categories[0]?.id || '',
+      subCategoryId: newPresSubId || localData.categories[0]?.subCategories[0]?.id || '',
       authors: [{ name: 'Author Name', initials: 'AN' }],
       details: 'Presentation Details'
     };
@@ -120,7 +125,11 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setNewPresTypeId(localData.categories[0]?.id || '');
+              setNewPresSubId(localData.categories[0]?.subCategories[0]?.id || '');
+              setShowAddModal(true);
+            }}
             className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:from-orange-600 hover:to-orange-700 transition-all duration-200 text-sm"
             title="Add New Presentation (Ctrl + `)"
           >
@@ -156,21 +165,32 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
       </div>
 
       {/* Presentations List */}
-      <div className="space-y-3">
-        {filteredPresentations.length === 0 && (
+      <div className="space-y-8">
+        {filteredPresentations.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
             <FontAwesomeIcon icon={faFileAlt} className="text-gray-300 text-4xl mb-3" />
             <p className="text-gray-400 font-medium">No presentations found</p>
             <p className="text-gray-300 text-sm mt-1">{searchQuery ? 'Try a different search term' : 'Click "Add New" to get started'}</p>
           </div>
-        )}
+        ) : (
+          localData.categories.map((cat: Category) => {
+            const catPresentations = filteredPresentations.filter((p: Presentation) => p.presentationTypeId === cat.id);
 
-        {filteredPresentations.map((pres: Presentation, index: number) => {
-          const isExpanded = expandedId === pres.id;
-          const typeOptions = localData.categories;
-          const subOptions = localData.categories.find((c: Category) => c.id === pres.presentationTypeId)?.subCategories || [];
+            if (catPresentations.length === 0) return null;
 
-          return (
+            return (
+              <div key={cat.id} className="space-y-4">
+                <h3 className="text-xl font-bold text-gray-800 border-b border-gray-200 pb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-orange-500 text-lg" />
+                  {cat.name} Presentations
+                </h3>
+                <div className="space-y-3">
+                  {catPresentations.map((pres: Presentation, index: number) => {
+                    const isExpanded = expandedId === pres.id;
+                    const typeOptions = localData.categories;
+                    const subOptions = localData.categories.find((c: Category) => c.id === pres.presentationTypeId)?.subCategories || [];
+
+                    return (
             <div
               key={pres.id}
               className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded
@@ -215,16 +235,31 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                   {/* Title */}
                   <div className="pt-5 space-y-5">
                     <div>
-                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                        <FontAwesomeIcon icon={faFileAlt} className="text-orange-400" />
-                        Title
-                      </label>
-                      <input
-                        value={pres.title}
-                        onChange={e => updatePresentation(pres.id, 'title', e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all bg-gray-50 focus:bg-white"
-                        placeholder="Enter presentation title"
-                      />
+                      <div>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          <FontAwesomeIcon icon={faUser} className="text-orange-400" />
+                          Contestant No.
+                        </label>
+                        <input
+                          value={pres.contestantNo || ''}
+                          onChange={e => updatePresentation(pres.id, 'contestantNo', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all bg-gray-50 focus:bg-white"
+                          placeholder="Enter contestant number"
+                        />
+                      </div>
+
+                      <div className='mt-3'>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          <FontAwesomeIcon icon={faFileAlt} className="text-orange-400" />
+                          Title
+                        </label>
+                        <input
+                          value={pres.title || ''}
+                          onChange={e => updatePresentation(pres.id, 'title', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all bg-gray-50 focus:bg-white"
+                          placeholder="Enter presentation title"
+                        />
+                      </div>
                     </div>
 
                     {/* Type & Category */}
@@ -272,7 +307,7 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                         Details
                       </label>
                       <textarea
-                        value={pres.details}
+                        value={pres.details || ''}
                         onChange={e => updatePresentation(pres.id, 'details', e.target.value)}
                         rows={3}
                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all resize-none"
@@ -293,13 +328,13 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                               {author.initials || '?'}
                             </span>
                             <input
-                              value={author.name}
+                              value={author.name || ''}
                               onChange={e => updateAuthor(pres.id, idx, 'name', e.target.value)}
                               className="flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder-gray-400"
                               placeholder="Author name"
                             />
                             <input
-                              value={author.initials}
+                              value={author.initials || ''}
                               onChange={e => updateAuthor(pres.id, idx, 'initials', e.target.value)}
                               className="w-14 text-center bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs uppercase font-bold text-gray-600 outline-none focus:ring-2 focus:ring-orange-200"
                               placeholder="IN"
@@ -336,8 +371,13 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 </div>
               )}
             </div>
-          );
-        })}
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Add Modal Overlay */}
@@ -351,18 +391,31 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
               <h3 className="text-xl font-bold text-gray-900">Add New Presentation</h3>
               <p className="text-sm text-gray-500 mt-1">A new presentation will be created with default values. You can customize it after creation.</p>
             </div>
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 px-4 py-3 rounded-xl">
-                <FontAwesomeIcon icon={faCheck} className="text-emerald-500" />
-                <span>Default title and details will be added</span>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1 text-left">Presentation Type</label>
+                <select
+                  value={newPresTypeId}
+                  onChange={e => {
+                    const newType = e.target.value;
+                    const newSubs = localData.categories.find(c => c.id === newType)?.subCategories || [];
+                    setNewPresTypeId(newType);
+                    setNewPresSubId(newSubs[0]?.id || '');
+                  }}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all"
+                >
+                  {localData.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
-              <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 px-4 py-3 rounded-xl">
-                <FontAwesomeIcon icon={faCheck} className="text-emerald-500" />
-                <span>One author placeholder will be included</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 px-4 py-3 rounded-xl">
-                <FontAwesomeIcon icon={faCheck} className="text-emerald-500" />
-                <span>First category will be pre-selected</span>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1 text-left">Category</label>
+                <select
+                  value={newPresSubId}
+                  onChange={e => setNewPresSubId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all"
+                >
+                  {(localData.categories.find(c => c.id === newPresTypeId)?.subCategories || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
             </div>
             <div className="flex gap-3">

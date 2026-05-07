@@ -67,7 +67,7 @@ export default function CategoriesManager({ data, onSave }: { data: AppData, onS
         <div key={cat.id} className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center gap-4 mb-4">
             <input 
-              value={cat.name} 
+              value={cat.name || ''} 
               onChange={e => updateCategoryName(cat.id, e.target.value)}
               className="text-lg font-bold border-b border-gray-300 focus:border-orange-500 outline-none flex-1 py-1"
             />
@@ -81,7 +81,7 @@ export default function CategoriesManager({ data, onSave }: { data: AppData, onS
             {cat.subCategories.map((sub: SubCategory) => (
               <div key={sub.id} className="flex items-center gap-4">
                 <input 
-                  value={sub.name} 
+                  value={sub.name || ''} 
                   onChange={e => updateSubCategoryName(cat.id, sub.id, e.target.value)}
                   className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm"
                 />

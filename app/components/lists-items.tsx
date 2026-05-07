@@ -5,13 +5,14 @@ import { memo } from "react";
 // ============ List Item Component (DRY) ============
 interface ListItemProps {
   title: string;
+  contestantNo: string;
   isSelected: boolean;
   onClick: () => void;
   indent?: string;
 }
 
 const ListItem = memo(
-  ({ title, isSelected, onClick, indent = 'px-4' }: ListItemProps) => (
+  ({ title, contestantNo, isSelected, onClick, indent = 'px-4' }: ListItemProps) => (
     <button
       onClick={onClick}
       className={`w-full text-left ${indent} py-3 font-poppins text-sm transition-all duration-200 border-l-4 flex items-center gap-3 ${
@@ -21,7 +22,7 @@ const ListItem = memo(
       }`}
     >
       <FontAwesomeIcon icon={faTag} className="w-3 h-3" />
-      <span className="truncate">{title}</span>
+      <span className="truncate">{contestantNo ? `${contestantNo} -` : ''} {title}</span>
     </button>
   )
 );

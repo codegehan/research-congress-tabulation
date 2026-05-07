@@ -79,9 +79,11 @@ export default function Dashboard() {
         name: sub.name,
         titles: (data.presentations || [])
           .filter((p: Presentation) => p.presentationTypeId === cat.id && p.subCategoryId === sub.id)
-          .map((p: Presentation) => p.title)
-          .sort((a: string, b: string) => a.localeCompare(b))
-          .map((title: string) => title.toUpperCase()),
+          .sort((a: Presentation, b: Presentation) => a.title.localeCompare(b.title))
+          .map((p: Presentation) => ({
+            title: p.title.toUpperCase(),
+            contestantNo: p.contestantNo || null,
+          })),
       }))
     }));
   }, [data]);
@@ -91,6 +93,7 @@ export default function Dashboard() {
     return (
       data.presentations.find((p: Presentation) => p.title.toUpperCase() === selectedTitle?.toUpperCase()) || {
         id: '',
+        contestantNo: '',
         title: selectedTitle,
         presentationTypeId: '',
         subCategoryId: '',

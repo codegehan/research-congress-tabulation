@@ -141,13 +141,13 @@ export default function JudgesManager({ data, onSave }: { data: AppData, onSave:
                 </div>
                 <div className="flex-1 min-w-0 pr-6">
                   <input
-                    value={judge.name}
+                    value={judge.name || ''}
                     onChange={e => updateJudge(judge.id, 'name', e.target.value)}
                     className="w-full font-bold text-gray-900 text-base bg-transparent border-none outline-none focus:bg-gray-50 focus:rounded-lg focus:px-2 focus:-ml-2 transition-all placeholder-gray-400"
                     placeholder="Judge Name"
                   />
                   <input
-                    value={judge.credentials}
+                    value={judge.credentials || ''}
                     onChange={e => updateJudge(judge.id, 'credentials', e.target.value)}
                     className="w-full text-sm text-gray-500 bg-transparent border-none outline-none focus:bg-gray-50 focus:rounded-lg focus:px-2 focus:-ml-2 transition-all placeholder-gray-400 mt-0.5"
                     placeholder="e.g., Lead AI Engineer, Tech Corp"
@@ -173,7 +173,7 @@ export default function JudgesManager({ data, onSave }: { data: AppData, onSave:
                 </button>
               </div>
               <input
-                value={judge.accessCode}
+                value={judge.accessCode || ''}
                 onChange={e => updateJudge(judge.id, 'accessCode', e.target.value)}
                 className="w-full mt-1 text-lg font-mono font-bold text-indigo-600 bg-transparent border-none outline-none tracking-widest"
                 placeholder="ACCESS CODE"
