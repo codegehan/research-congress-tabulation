@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
             credentials: judge.credentials,
             accessCode: judge.accessCode,
             status: judge.status,
+            assignedSubCategoryName: judge.assignedSubCategoryName,
         },
       },
       { status: 200 }

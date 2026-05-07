@@ -32,6 +32,11 @@ export default function JudgesManager({ data, onSave }: { data: AppData, onSave:
     setLocalData({ ...localData, judges: newList });
   };
 
+  const updateJudgeMultiple = (id: string, updates: Record<string, string>) => {
+    const newList = judgesList.map((j: Judge) => j.id === id ? { ...j, ...updates } : j);
+    setLocalData({ ...localData, judges: newList });
+  };
+
   const removeJudge = (id: string) => {
     const newList = judgesList.filter((j: Judge) => j.id !== id);
     setLocalData({ ...localData, judges: newList });
@@ -153,6 +158,19 @@ export default function JudgesManager({ data, onSave }: { data: AppData, onSave:
                     placeholder="e.g., Lead AI Engineer, Tech Corp"
                   />
                 </div>
+              </div>
+              <div className="mt-4 pt-2 border-t border-gray-50">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Assigned Subcategory</label>
+                <select
+                  value={judge.assignedSubCategoryName || ''}
+                  onChange={e => updateJudge(judge.id, 'assignedSubCategoryName', e.target.value)}
+                  className="w-full text-xs text-gray-700 bg-gray-50 border-none rounded-lg outline-none focus:ring-2 focus:ring-blue-200 py-1.5 px-2"
+                >
+                  <option value="">All Subcategories (Full Access)</option>
+                  {Array.from(new Set(localData.categories.flatMap(c => c.subCategories).map(s => s.name))).sort().map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

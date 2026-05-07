@@ -28,6 +28,8 @@ export interface Presentation {
   subCategoryId: string;
   authors: Author[];
   details: string;
+  campus?: string;
+  areaCluster?: string;
 }
 
 export interface Judge {
@@ -35,6 +37,7 @@ export interface Judge {
   accessCode: string;
   name: string;
   credentials: string;
+  assignedSubCategoryName?: string;
 }
 
 export interface AppData {

@@ -12,6 +12,7 @@ interface CategoryItemProps {
   };
   isExpanded: boolean;
   selectedTitle: string | null;
+  scoredPresentations?: Set<string>;
   onToggle: () => void;
   onSelectTitle: (title: string) => void;
   colorClass: string;
@@ -22,6 +23,7 @@ const CategoryItem = memo(
     category,
     isExpanded,
     selectedTitle,
+    scoredPresentations,
     onToggle,
     onSelectTitle,
     colorClass,
@@ -49,6 +51,7 @@ const CategoryItem = memo(
               title={item.title}
               contestantNo={item.contestantNo ? String(item.contestantNo) : ''}
               isSelected={selectedTitle === item.title}
+              isDone={scoredPresentations?.has(item.title)}
               onClick={() => onSelectTitle(item.title)}
               indent="px-8"
             />

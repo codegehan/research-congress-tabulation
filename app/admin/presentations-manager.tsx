@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faSave, faUser, faSearch, faChevronDown, faChevronUp, faTimes, faFileAlt, faLayerGroup, faFolderOpen, faAlignLeft, faUsers, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faSave, faUser, faSearch, faChevronDown, faChevronUp, faTimes, faFileAlt, faLayerGroup, faFolderOpen, faAlignLeft, faUsers, faCheck, faFileExcel, faBuilding, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 
 import { AppData, Category, SubCategory, Presentation, Author } from '../types';
+import * as XLSX from 'xlsx';
 
 export default function PresentationsManager({ data, onSave }: { data: AppData, onSave: (d: AppData) => void }) {
   const [localData, setLocalData] = useState<AppData>(data);
@@ -35,14 +36,16 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
   }, [handleSave]);
 
   const addPresentation = () => {
-    const newPres = {
+    const newPres: Presentation = {
       id: Date.now().toString(),
       contestantNo: '#',
       title: 'New Presentation Title',
       presentationTypeId: newPresTypeId || localData.categories[0]?.id || '',
       subCategoryId: newPresSubId || localData.categories[0]?.subCategories[0]?.id || '',
       authors: [{ name: 'Author Name', initials: 'AN' }],
-      details: 'Presentation Details'
+      details: 'Presentation Details',
+      campus: '',
+      areaCluster: ''
     };
     setLocalData({ ...localData, presentations: [...localData.presentations, newPres] });
     setExpandedId(newPres.id);
@@ -110,6 +113,31 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
     return cat?.subCategories.find((s: SubCategory) => s.id === subId)?.name || '—';
   };
 
+  const handleExportExcel = () => {
+    const headers = ['Contestant No', 'Title', 'Authors', 'Presentation Type', 'Category', 'Campus', 'Area/Cluster'];
+    
+    const rows = localData.presentations.map((pres: Presentation) => {
+      const authors = pres.authors.map((a: Author) => a.name).join('; ');
+      const type = getCategoryName(pres.presentationTypeId);
+      const category = getSubCategoryName(pres.presentationTypeId, pres.subCategoryId);
+      
+      return {
+        [headers[0]]: pres.contestantNo || '',
+        [headers[1]]: pres.title || '',
+        [headers[2]]: authors,
+        [headers[3]]: type,
+        [headers[4]]: category,
+        [headers[5]]: pres.campus || '',
+        [headers[6]]: pres.areaCluster || '',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Presentations");
+    XLSX.writeFile(workbook, "presentations_export.xlsx");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,6 +152,13 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
           <p className="text-sm text-gray-500 mt-1 ml-[52px]">{localData.presentations.length} presentation{localData.presentations.length !== 1 ? 's' : ''} registered</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportExcel}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm"
+            title="Export to Excel"
+          >
+            <FontAwesomeIcon icon={faFileExcel} /> Export
+          </button>
           <button
             onClick={() => {
               setNewPresTypeId(localData.categories[0]?.id || '');
@@ -297,6 +332,39 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                         >
                           {subOptions.map((s: SubCategory) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
+                      </div>
+                    </div>
+
+                    {/* Campus & Area/Cluster */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          <FontAwesomeIcon icon={faBuilding} className="text-teal-400" />
+                          Campus
+                        </label>
+                        <select
+                          value={pres.campus || ''}
+                          onChange={e => updatePresentation(pres.id, 'campus', e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all"
+                        >
+                          <option value="">Select Campus</option>
+                          <option value="JRMSU Main">JRMSU Main</option>
+                          <option value="JRMSU - Katipunan">JRMSU - Katipunan</option>
+                          <option value="JRMSU - Tampilisan">JRMSU - Tampilisan</option>
+                          <option value="JRMSU- Siocon">JRMSU- Siocon</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-indigo-400" />
+                          Area / Cluster
+                        </label>
+                        <input
+                          value={pres.areaCluster || ''}
+                          onChange={e => updatePresentation(pres.id, 'areaCluster', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all bg-gray-50 focus:bg-white"
+                          placeholder="Enter Area/Cluster"
+                        />
                       </div>
                     </div>
 

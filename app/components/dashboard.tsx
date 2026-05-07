@@ -13,15 +13,21 @@ import CategoryItem from './category-items';
 import PresentationDetails from './presentation-details';
 import ScoringTabulation from './scoring-tabulation';
 import { AppData, Category, SubCategory, Presentation, Author } from '../types';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // ============ Main Dashboard Component ============
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState({ name: 'Loading...', email: '' });
   const [currentJudgeId, setCurrentJudgeId] = useState<string | null>(null);
+  const [currentJudge, setCurrentJudge] = useState<any>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [data, setData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+  const [presentationType, setPresentationType] = useState<string | null>(null);
+  const [isScoring, setIsScoring] = useState(false);
 
   useEffect(() => {
     const judgeData = localStorage.getItem('currentJudge');
@@ -29,6 +35,7 @@ export default function Dashboard() {
       const judge = JSON.parse(judgeData || '{}');
       setCurrentUser({ name: judge.name, email: judge.credentials });
       setCurrentJudgeId(judge.id);
+      setCurrentJudge(judge);
       setIsAuthed(true);
     } catch (error) {
       console.error('Failed to parse judge data:', error);
@@ -62,31 +69,58 @@ export default function Dashboard() {
 
   // Presentation state
   const [openPresentations, setOpenPresentations] = useState<Set<string>>(new Set());
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  // Title selection
-  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
-  const [presentationType, setPresentationType] = useState<string | null>(null);
-  const [isScoring, setIsScoring] = useState(false);
+  const [scoredPresentations, setScoredPresentations] = useState<Set<string>>(new Set());
 
+  // Fetch scored presentations for current judge
+  useEffect(() => {
+    if (!currentJudgeId) return;
+
+    const fetchScored = async () => {
+      try {
+        const q = query(collection(db, 'scores'), where('judgeId', '==', currentJudgeId));
+        const snapshot = await getDocs(q);
+        const scored = new Set<string>();
+        snapshot.forEach(doc => {
+          scored.add(doc.data().presentationTitle);
+        });
+        setScoredPresentations(scored);
+      } catch (err) {
+        console.error('Failed to fetch scored presentations', err);
+      }
+    };
+
+    fetchScored();
+  }, [currentJudgeId, isScoring]);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const presentationsData = useMemo(() => {
     if (!data || !data.categories) return [];
-    return data.categories.map((cat: Category, idx: number) => ({
-      id: cat.id,
-      name: cat.name,
-      icon: idx === 0 ? faBook : faLayerGroup,
-      categories: (cat.subCategories || []).map((sub: SubCategory) => ({
-        id: sub.id,
-        name: sub.name,
-        titles: (data.presentations || [])
-          .filter((p: Presentation) => p.presentationTypeId === cat.id && p.subCategoryId === sub.id)
-          .sort((a: Presentation, b: Presentation) => a.title.localeCompare(b.title))
-          .map((p: Presentation) => ({
-            title: p.title.toUpperCase(),
-            contestantNo: p.contestantNo || null,
-          })),
-      }))
-    }));
-  }, [data]);
+    
+    const mapped = data.categories.map((cat: Category, idx: number) => {
+      let subCats = cat.subCategories || [];
+      if (currentJudge?.assignedSubCategoryName) {
+        subCats = subCats.filter(s => s.name === currentJudge.assignedSubCategoryName);
+      }
+      
+      return {
+        id: cat.id,
+        name: cat.name,
+        icon: idx === 0 ? faBook : faLayerGroup,
+        categories: subCats.map((sub: SubCategory) => ({
+          id: sub.id,
+          name: sub.name,
+          titles: (data.presentations || [])
+            .filter((p: Presentation) => p.presentationTypeId === cat.id && p.subCategoryId === sub.id)
+            .sort((a: Presentation, b: Presentation) => a.title.localeCompare(b.title))
+            .map((p: Presentation) => ({
+              title: p.title.toUpperCase(),
+              contestantNo: p.contestantNo || null,
+            })),
+        }))
+      };
+    });
+
+    return mapped.filter(catData => catData.categories.length > 0);
+  }, [data, currentJudge]);
 
   const selectedPresentation = useMemo(() => {
     if (!data || !selectedTitle) return null;
@@ -190,6 +224,7 @@ export default function Dashboard() {
                       category={category}
                       isExpanded={expandedCategory === category.id}
                       selectedTitle={selectedTitle}
+                      scoredPresentations={scoredPresentations}
                       onToggle={() => toggleCategory(category.id)}
                       onSelectTitle={(title) => handleSelectTitle(title, presentation.id as 'research' | 'poster')}
                       colorClass="bg-orange-50"
