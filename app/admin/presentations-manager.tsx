@@ -113,30 +113,63 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
     return cat?.subCategories.find((s: SubCategory) => s.id === subId)?.name || '—';
   };
 
-  const handleExportExcel = () => {
-    const headers = ['Contestant No', 'Title', 'Authors', 'Presentation Type', 'Category', 'Campus', 'Area/Cluster'];
-    
-    const rows = localData.presentations.map((pres: Presentation) => {
-      const authors = pres.authors.map((a: Author) => a.name).join('; ');
-      const type = getCategoryName(pres.presentationTypeId);
-      const category = getSubCategoryName(pres.presentationTypeId, pres.subCategoryId);
-      
-      return {
-        [headers[0]]: pres.contestantNo || '',
-        [headers[1]]: pres.title || '',
-        [headers[2]]: authors,
-        [headers[3]]: type,
-        [headers[4]]: category,
-        [headers[5]]: pres.campus || '',
-        [headers[6]]: pres.areaCluster || '',
-      };
+const handleExportExcel = () => {
+  const workbook = XLSX.utils.book_new();
+
+  // Group presentations by category (presentationTypeId)
+  const groupedByCategory = localData.presentations.reduce((acc: Record<string, Presentation[]>, pres: Presentation) => {
+    const categoryKey = pres.presentationTypeId || 'uncategorized';
+    if (!acc[categoryKey]) acc[categoryKey] = [];
+    acc[categoryKey].push(pres);
+    return acc;
+  }, {});
+
+  Object.entries(groupedByCategory).forEach(([categoryId, categoryPresentations]) => {
+    const categoryName = getCategoryName(categoryId) || 'Uncategorized';
+
+    // Further group by subcategory within each category
+    const groupedBySubCategory = (categoryPresentations as Presentation[]).reduce((acc: Record<string, Presentation[]>, pres: Presentation) => {
+      const subKey = pres.subCategoryId || 'general';
+      if (!acc[subKey]) acc[subKey] = [];
+      acc[subKey].push(pres);
+      return acc;
+    }, {});
+
+    const sheetData: (string | number)[][] = [];
+
+    Object.entries(groupedBySubCategory).forEach(([subCategoryId, subPresentations]) => {
+      const subCategoryName = getSubCategoryName(categoryId, subCategoryId) || 'General';
+
+      // Subcategory header row
+      sheetData.push([subCategoryName]);
+      // Column headers
+      sheetData.push(['Presentation No', 'Title', 'Authors', 'Campus', 'Area/Cluster']);
+
+      // Numbered rows per subcategory
+      (subPresentations as Presentation[]).forEach((pres: Presentation, index: number) => {
+        const authors = pres.authors.map((a: Author) => a.name).join('; ');
+        sheetData.push([
+          index + 1,                  // Sequential number per subcategory
+          pres.title || '',
+          authors,
+          pres.campus || '',
+          pres.areaCluster || '',
+        ]);
+      });
+
+      sheetData.push([]); // Empty row between subcategories
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Presentations");
-    XLSX.writeFile(workbook, "presentations_export.xlsx");
-  };
+    // Sanitize sheet name (Excel limit: 31 chars, no special chars)
+    const sheetName = categoryName.replace(/[:\\\/\?\*\[\]]/g, '').substring(0, 31);
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // Optional: bold the subcategory header rows by tracking their row indices
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+
+  XLSX.writeFile(workbook, "presentations_export.xlsx");
+};
 
   return (
     <div className="space-y-6">
