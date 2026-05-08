@@ -6,12 +6,14 @@ import {
   faBook,
   faLayerGroup,
   faArrowUp,
+  faTrophy,
 } from '@fortawesome/free-solid-svg-icons';
 import NavBar from './navbar';
 import AccordionSection from './accordion';
 import CategoryItem from './category-items';
 import PresentationDetails from './presentation-details';
 import ScoringTabulation from './scoring-tabulation';
+import MyRankings from './my-rankings';
 import { AppData, Category, SubCategory, Presentation, Author } from '../types';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -28,6 +30,8 @@ export default function Dashboard() {
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [presentationType, setPresentationType] = useState<string | null>(null);
   const [isScoring, setIsScoring] = useState(false);
+  const [viewMode, setViewMode] = useState<'presentations' | 'rankings'>('presentations');
+  const [judgeScores, setJudgeScores] = useState<any[]>([]);
 
   useEffect(() => {
     const judgeData = localStorage.getItem('currentJudge');
@@ -80,10 +84,14 @@ export default function Dashboard() {
         const q = query(collection(db, 'scores'), where('judgeId', '==', currentJudgeId));
         const snapshot = await getDocs(q);
         const scored = new Set<string>();
+        const allScores: any[] = [];
         snapshot.forEach(doc => {
-          scored.add(doc.data().presentationTitle);
+          const docData = doc.data();
+          scored.add(docData.presentationTitle);
+          allScores.push(docData);
         });
         setScoredPresentations(scored);
+        setJudgeScores(allScores);
       } catch (err) {
         console.error('Failed to fetch scored presentations', err);
       }
@@ -164,6 +172,7 @@ export default function Dashboard() {
     setSelectedTitle(title);
     setPresentationType(type);
     setIsScoring(false);
+    setViewMode('presentations');
     // Scroll to details section after state update
     setTimeout(() => {
       const detailsElement = document.getElementById('title-details');
@@ -207,6 +216,23 @@ export default function Dashboard() {
           {/* Left Sidebar - Accordions */}
           <div className="lg:col-span-1">
             <div className="space-y-4 sticky top-24">
+              {/* My Rankings Button */}
+              <button
+                onClick={() => {
+                  setViewMode('rankings');
+                  setExpandedCategory(null);
+                  setSelectedTitle(null);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all shadow-sm ${
+                  viewMode === 'rankings'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'
+                }`}
+              >
+                <FontAwesomeIcon icon={faTrophy} className={viewMode === 'rankings' ? 'text-white' : 'text-orange-500'} />
+                My Rankings
+              </button>
+
               {/* Presentations Accordion */}
               {presentationsData.map((presentation) => (
                 <AccordionSection
@@ -241,6 +267,8 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg shadow-lg p-12 text-center border border-gray-100 h-64 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
               </div>
+            ) : viewMode === 'rankings' && data ? (
+              <MyRankings scores={judgeScores} data={data} currentJudge={currentJudge} />
             ) : selectedPresentation && presentationType ? (
               isScoring ? (
                 <ScoringTabulation

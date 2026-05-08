@@ -131,7 +131,7 @@ export default function ResultsSummary({ data }: { data: AppData }) {
       presentationAggregates[s.presentationTitle].total += s.totalScore;
       presentationAggregates[s.presentationTitle].count += 1;
     });
-    
+
     // Calculate total max possible score for each subcategory
     const subCategoryMaxScores: Record<string, number> = {};
     data.categories.forEach((cat: Category) => {
@@ -140,7 +140,7 @@ export default function ResultsSummary({ data }: { data: AppData }) {
         subCategoryMaxScores[sub.id] = criteria.reduce((sum, c) => sum + (c.maxScore || 100), 0);
       });
     });
-    
+
     const rankedList: RankedPresentation[] = Object.entries(presentationAggregates).map(([title, agg]) => {
       const maxScore = subCategoryMaxScores[agg.subCategoryId] || 100;
       const avgScoreRaw = agg.total / agg.count;
@@ -148,7 +148,7 @@ export default function ResultsSummary({ data }: { data: AppData }) {
       const avgScore = maxScore > 0 ? (avgScoreRaw / maxScore) * 100 : 0;
       return { title, presentationType: agg.type, subCategoryId: agg.subCategoryId, avgScore, judgeCount: agg.count };
     });
-    
+
     const grouped: Record<string, Record<string, RankedPresentation[]>> = {};
     data.categories.forEach((cat: Category) => {
       grouped[cat.id] = {};
@@ -429,16 +429,16 @@ export default function ResultsSummary({ data }: { data: AppData }) {
             {specialAwards.map((award) => {
               const category = data.categories.find(c => c.id === award.categoryId);
               const subCategory = category?.subCategories.find(s => s.id === award.subCategoryId);
-              
+
               // Get all presentations in this sub-category
               const presInSubCat = (data.presentations || []).filter(
                 p => p.presentationTypeId === award.categoryId && p.subCategoryId === award.subCategoryId
               ).map(p => p.title);
-              
+
               // Get scores for all presentations in this sub-category, calculated using only selected criteria
               const presentationScores: Array<{ title: string; avgScore: number; judgeCount: number }> = [];
               const totalMaxScore = getTotalMaxScoreForAward(award);
-              
+
               presInSubCat.forEach(presTitle => {
                 const entries = scores.filter(s => s.presentationTitle?.toUpperCase() === presTitle?.toUpperCase());
                 if (entries.length > 0) {
@@ -456,13 +456,13 @@ export default function ResultsSummary({ data }: { data: AppData }) {
                   presentationScores.push({ title: presTitle, avgScore, judgeCount: entries.length });
                 }
               });
-              
+
               // Sort by score descending
               const rankedPresentations = presentationScores.sort((a, b) => b.avgScore - a.avgScore);
-              
+
               // LIMIT TO TOP 3 - Change this number to display more awards (e.g., change 3 to 5 for top 5)
               const displayAwardResults = rankedPresentations.slice(0, 3);
-              
+
               return (
                 <div key={award.id} className="bg-white p-6 rounded-lg shadow-lg border-l-4 border-purple-500">
                   <div className="flex items-start justify-between mb-4">
@@ -480,7 +480,7 @@ export default function ResultsSummary({ data }: { data: AppData }) {
                       <FontAwesomeIcon icon={faTrash} />
                     </button>
                   </div>
-                  
+
                   {rankedPresentations.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -619,40 +619,40 @@ export default function ResultsSummary({ data }: { data: AppData }) {
                         {displayResults
                           .map((result) => ({ ...result, title: result.title.toUpperCase() }))
                           .map((result) => (
-                          <tr key={result.title} className={`hover:bg-gray-50/50 transition-colors ${result.rank === 1 ? 'bg-orange-50/30' : ''}`}>
-                            <td className="px-5 py-3">
-                              <div className="flex items-center gap-2">
-                                {result.rank === 1 && <FontAwesomeIcon icon={faMedal} className="text-yellow-500" />}
-                                {result.rank === 2 && <FontAwesomeIcon icon={faMedal} className="text-gray-400" />}
-                                {result.rank === 3 && <FontAwesomeIcon icon={faMedal} className="text-amber-600" />}
-                                <span className={`font-bold ${result.rank! <= 3 ? 'text-lg' : 'text-gray-600'}`}>
-                                  {result.rank}{getRankSuffix(result.rank!)}
+                            <tr key={result.title} className={`hover:bg-gray-50/50 transition-colors ${result.rank === 1 ? 'bg-orange-50/30' : ''}`}>
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                  {result.rank === 1 && <FontAwesomeIcon icon={faMedal} className="text-yellow-500" />}
+                                  {result.rank === 2 && <FontAwesomeIcon icon={faMedal} className="text-gray-400" />}
+                                  {result.rank === 3 && <FontAwesomeIcon icon={faMedal} className="text-amber-600" />}
+                                  <span className={`font-bold ${result.rank! <= 3 ? 'text-lg' : 'text-gray-600'}`}>
+                                    {result.rank}{getRankSuffix(result.rank!)}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <p className="font-semibold text-gray-900 leading-tight">{result.title}</p>
+                              </td>
+                              <td className="px-5 py-3 text-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {result.judgeCount}
                                 </span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-3">
-                              <p className="font-semibold text-gray-900 leading-tight">{result.title}</p>
-                            </td>
-                            <td className="px-5 py-3 text-center">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {result.judgeCount}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-right">
-                              <span className="text-xl font-bold text-orange-600">{result.avgScore.toFixed(2)}</span>
-                            </td>
-                            <td className="px-5 py-3 text-center">
-                              <button
-                                onClick={() => { setDetailTitle(result.title); setDetailType(result.presentationType); }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
-                                title="View all judges' scores"
-                              >
-                                <FontAwesomeIcon icon={faTableCells} />
-                                View Scores
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="px-5 py-3 text-right">
+                                <span className="text-xl font-bold text-orange-600">{result.avgScore.toFixed(2)}</span>
+                              </td>
+                              <td className="px-5 py-3 text-center">
+                                <button
+                                  onClick={() => { setDetailTitle(result.title); setDetailType(result.presentationType); }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+                                  title="View all judges' scores"
+                                >
+                                  <FontAwesomeIcon icon={faTableCells} />
+                                  View Scores
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
