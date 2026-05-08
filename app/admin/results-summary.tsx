@@ -153,11 +153,27 @@ export default function ResultsSummary({ data }: { data: AppData }) {
     data.categories.forEach((cat: Category) => {
       grouped[cat.id] = {};
       (cat.subCategories || []).forEach((sub: SubCategory) => {
-        const items = rankedList
-          .filter((p) => p.presentationType === cat.id && p.subCategoryId === sub.id)
-          .sort((a, b) => b.avgScore - a.avgScore)
-          .map((p, index) => ({ ...p, rank: index + 1 }));
-        if (items.length > 0) grouped[cat.id][sub.id] = items;
+        const filtered = rankedList.filter((p) => p.presentationType === cat.id && p.subCategoryId === sub.id);
+        const sorted = filtered.sort((a, b) => b.avgScore - a.avgScore);
+        
+        const ranked: RankedPresentation[] = [];
+        let currentRank = 0;
+        let i = 0;
+        while (i < sorted.length) {
+          let j = i;
+          while (j < sorted.length && sorted[j].avgScore === sorted[i].avgScore) {
+            j++;
+          }
+          
+          currentRank++;
+          for (let k = i; k < j; k++) {
+            ranked.push({ ...sorted[k], rank: currentRank });
+          }
+          
+          i = j;
+        }
+        
+        if (ranked.length > 0) grouped[cat.id][sub.id] = ranked;
       });
     });
     return grouped;
@@ -457,9 +473,26 @@ export default function ResultsSummary({ data }: { data: AppData }) {
                 }
               });
 
-              // Sort by score descending
-              const rankedPresentations = presentationScores.sort((a, b) => b.avgScore - a.avgScore);
-
+              // Sort and apply custom ranking logic
+              const sorted = presentationScores.sort((a, b) => b.avgScore - a.avgScore);
+              const rankedPresentations: Array<{ title: string; avgScore: number; judgeCount: number; rank: number }> = [];
+              
+              let currentRank = 0;
+              let i = 0;
+              while (i < sorted.length) {
+                let j = i;
+                while (j < sorted.length && sorted[j].avgScore === sorted[i].avgScore) {
+                  j++;
+                }
+                
+                currentRank++;
+                for (let k = i; k < j; k++) {
+                  rankedPresentations.push({ ...sorted[k], rank: currentRank });
+                }
+                
+                i = j;
+              }
+              
               // LIMIT TO TOP 3 - Change this number to display more awards (e.g., change 3 to 5 for top 5)
               const displayAwardResults = rankedPresentations.slice(0, 3);
 
@@ -497,11 +530,11 @@ export default function ResultsSummary({ data }: { data: AppData }) {
                             <tr key={pres.title} className={`${idx === 0 ? 'bg-purple-50/30' : 'hover:bg-gray-50/50'} transition-colors`}>
                               <td className="px-3 py-3">
                                 <div className="flex items-center gap-2">
-                                  {idx === 0 && <FontAwesomeIcon icon={faMedal} className="text-yellow-500" />}
-                                  {idx === 1 && <FontAwesomeIcon icon={faMedal} className="text-gray-400" />}
-                                  {idx === 2 && <FontAwesomeIcon icon={faMedal} className="text-amber-600" />}
-                                  <span className={`font-bold ${idx < 3 ? 'text-lg text-purple-600' : 'text-gray-600'}`}>
-                                    {idx + 1}
+                                  {pres.rank === 1 && <FontAwesomeIcon icon={faMedal} className="text-yellow-500" />}
+                                  {pres.rank === 2 && <FontAwesomeIcon icon={faMedal} className="text-gray-400" />}
+                                  {pres.rank === 3 && <FontAwesomeIcon icon={faMedal} className="text-amber-600" />}
+                                  <span className={`font-bold ${pres.rank <= 3 ? 'text-lg text-purple-600' : 'text-gray-600'}`}>
+                                    {pres.rank}
                                   </span>
                                 </div>
                               </td>

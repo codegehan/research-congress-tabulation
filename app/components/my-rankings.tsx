@@ -40,11 +40,25 @@ export default function MyRankings({ scores, data, currentJudge }: MyRankingsPro
 
         if (relevantScores.length > 0) {
           // Sort descending by totalScore
-          const sorted = relevantScores.sort((a, b) => b.totalScore - a.totalScore).map((s, idx) => ({
-            ...s,
-            rank: idx + 1
-          }));
-          grouped[cat.id][sub.id] = sorted;
+          const sortedByScore = relevantScores.sort((a, b) => b.totalScore - a.totalScore);
+          
+          const ranked: any[] = [];
+          let currentRank = 0;
+          let i = 0;
+          while (i < sortedByScore.length) {
+            let j = i;
+            while (j < sortedByScore.length && sortedByScore[j].totalScore === sortedByScore[i].totalScore) {
+              j++;
+            }
+            
+            currentRank++;
+            for (let k = i; k < j; k++) {
+              ranked.push({ ...sortedByScore[k], rank: currentRank });
+            }
+            
+            i = j;
+          }
+          grouped[cat.id][sub.id] = ranked;
         }
       });
     });
