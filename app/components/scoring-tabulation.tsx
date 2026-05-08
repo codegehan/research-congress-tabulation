@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faSave, faLock } from '@fortawesome/free-solid-svg-icons';
 import { db } from '@/app/lib/firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
 import { ScoringCriteria } from '../types';
 import { toast } from 'react-toastify';
@@ -22,6 +22,7 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isLoadingScore, setIsLoadingScore] = useState(true);
+  const [existingDocId, setExistingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchExistingScore = async () => {
@@ -33,9 +34,10 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0];
-          setScores(doc.data().scores || {});
-          setIsReadOnly(true);
+          const docData = querySnapshot.docs[0];
+          setScores(docData.data().scores || {});
+          setExistingDocId(docData.id);
+          // Removed setIsReadOnly(true) to allow updates
         }
       } catch (error) {
         console.error('Error fetching existing score:', error);
@@ -52,7 +54,7 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
   }, [title, judgeId]);
 
   const handleScoreChange = (id: string, value: string, maxScore: number) => {
-    if (isReadOnly) return;
+    // isReadOnly check removed to allow updates
     let numValue = parseInt(value, 10);
     if (isNaN(numValue)) {
       setScores((prev) => ({ ...prev, [id]: '' }));
@@ -71,7 +73,6 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
   }, [scores, criteria]);
 
   const handleSubmit = async () => {
-    if (isReadOnly) return;
     setIsSubmitting(true);
     try {
       const submissionData = {
@@ -82,11 +83,17 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
         scores: scores,
         totalScore: totalScore,
         submittedAt: new Date().toISOString(),
+        updatedAt: existingDocId ? new Date().toISOString() : undefined,
       };
 
-      await addDoc(collection(db, 'scores'), submissionData);
-      toast.success('Score submitted successfully!');
-      setIsReadOnly(true);
+      if (existingDocId) {
+        await setDoc(doc(db, 'scores', existingDocId), submissionData, { merge: true });
+        toast.success('Score updated successfully!');
+      } else {
+        const docRef = await addDoc(collection(db, 'scores'), submissionData);
+        setExistingDocId(docRef.id);
+        toast.success('Score submitted successfully!');
+      }
     } catch (error) {
       console.error('Error submitting score:', error);
       toast.error('Failed to submit score. Please try again.');
@@ -105,12 +112,7 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 border border-gray-100 animate-fade-in relative">
-      {isReadOnly && (
-        <div className="absolute top-4 right-4 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
-          <FontAwesomeIcon icon={faLock} />
-          Read Only (Already Scored)
-        </div>
-      )}
+
       <div className="flex items-center justify-between mb-6 border-b pb-4 mt-2">
         <div>
           <button
@@ -173,11 +175,11 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
       <div className="mt-8 pt-6 border-t flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={isSubmitting || isReadOnly}
+          disabled={isSubmitting}
           className="bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-poppins font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 group"
         >
           <FontAwesomeIcon icon={faSave} className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          {isSubmitting ? 'Submitting...' : 'Submit Evaluation'}
+          {isSubmitting ? 'Saving...' : existingDocId ? 'Update Evaluation' : 'Submit Evaluation'}
         </button>
       </div>
     </div>
