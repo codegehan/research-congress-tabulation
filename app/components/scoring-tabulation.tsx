@@ -83,7 +83,7 @@ export default function ScoringTabulation({ title, presentationType, criteria, j
         scores: scores,
         totalScore: totalScore,
         submittedAt: new Date().toISOString(),
-        updatedAt: existingDocId ? new Date().toISOString() : undefined,
+        updatedAt: existingDocId ? new Date().toISOString() : 0,
       };
 
       if (existingDocId) {
