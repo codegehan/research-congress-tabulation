@@ -45,17 +45,25 @@ const CategoryItem = memo(
       </button>
       {isExpanded && (
         <div className="bg-gradient-to-b from-gray-50 to-white divide-y border-l-4 border-orange-300">
-          {category.titles.map((item, idx) => (
-            <ListItem
-              key={idx}
-              title={item.title}
-              contestantNo={item.contestantNo ? String(item.contestantNo) : ''}
-              isSelected={selectedTitle === item.title}
-              isDone={scoredPresentations?.has(item.title)}
-              onClick={() => onSelectTitle(item.title)}
-              indent="px-8"
-            />
-          ))}
+          {category.titles.map((item, idx) => {
+            // Case-insensitive check for scored presentations
+            const isDone = scoredPresentations ? 
+              Array.from(scoredPresentations).some(title => title.toUpperCase() === item.title.toUpperCase()) 
+              : false;
+            
+            return (
+              <ListItem
+                key={idx}
+                title={item.title}
+                contestantNo={item.contestantNo ? String(item.contestantNo) : ''}
+                isSelected={selectedTitle === item.title}
+                isDone={isDone}
+                onClick={() => onSelectTitle(item.title)}
+                indent="px-8"
+                index={idx + 1}
+              />
+            );
+          })}
         </div>
       )}
     </div>

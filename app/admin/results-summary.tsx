@@ -5,7 +5,15 @@ import { db } from '@/app/lib/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { AppData, Category, SubCategory, Presentation, ScoringCriteria } from '../types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPrint, faTrophy, faMedal, faTableCells, faTimes, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faPrint, faTrophy, faMedal, faTableCells, faTimes, faFilter, faPlus, faTrash, faStar } from '@fortawesome/free-solid-svg-icons';
+
+interface SpecialAward {
+  id: string;
+  awardName: string;
+  categoryId: string;
+  subCategoryId: string;
+  scoringCriteria: string[]; // IDs of specific scoring criteria to include
+}
 
 interface ScoreEntry {
   presentationTitle: string;
@@ -32,7 +40,20 @@ export default function ResultsSummary({ data }: { data: AppData }) {
   const [detailTitle, setDetailTitle] = useState<string | null>(null);
   const [detailType, setDetailType] = useState<string | null>(null);
   const [topNLimits, setTopNLimits] = useState<Record<string, number>>({});
-  const printRef = useRef<HTMLDivElement>(null);
+  const [specialAwards, setSpecialAwards] = useState<SpecialAward[]>([]);
+  const [showAwardForm, setShowAwardForm] = useState(false);
+  const [awardForm, setAwardForm] = useState<{
+    awardName: string;
+    categoryId: string;
+    subCategoryId: string;
+    scoringCriteria: string[];
+  }>({
+    awardName: '',
+    categoryId: '',
+    subCategoryId: '',
+    scoringCriteria: [],
+  });
+  // const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'scores'));
@@ -47,6 +68,46 @@ export default function ResultsSummary({ data }: { data: AppData }) {
     return () => unsubscribe();
   }, []);
 
+  const addSpecialAward = () => {
+    if (!awardForm.awardName || !awardForm.categoryId || !awardForm.subCategoryId || awardForm.scoringCriteria.length === 0) {
+      alert('Please fill in all required fields and select at least 2 scoring criteria');
+      return;
+    }
+    const newAward: SpecialAward = {
+      id: Date.now().toString(),
+      awardName: awardForm.awardName,
+      categoryId: awardForm.categoryId,
+      subCategoryId: awardForm.subCategoryId,
+      scoringCriteria: awardForm.scoringCriteria,
+    };
+    setSpecialAwards([...specialAwards, newAward]);
+    setAwardForm({ awardName: '', categoryId: '', subCategoryId: '', scoringCriteria: [] });
+    setShowAwardForm(false);
+  };
+
+  const removeSpecialAward = (id: string) => {
+    setSpecialAwards(specialAwards.filter(a => a.id !== id));
+  };
+
+  // Helper function to convert score to percentage (0-100)
+  const convertToPercentage = (score: number, maxScore: number = 100): number => {
+    if (maxScore === 0) return 0;
+    return (score / maxScore) * 100;
+  };
+
+  // Get max score for a specific criteria
+  const getMaxScoreForCriteria = (subCategoryId: string, criteriaId: string): number => {
+    const criteria = data.scoringSettings?.[subCategoryId]?.find(c => c.id === criteriaId);
+    return criteria?.maxScore || 100;
+  };
+
+  // Get total max score for selected criteria in special award
+  const getTotalMaxScoreForAward = (award: SpecialAward): number => {
+    return award.scoringCriteria.reduce((sum, criteriaId) => {
+      return sum + getMaxScoreForCriteria(award.subCategoryId, criteriaId);
+    }, 0);
+  };
+
   const presentationLookup = useMemo(() => {
     const map: Record<string, { presentationTypeId: string; subCategoryId: string }> = {};
     (data.presentations || []).forEach((p: Presentation) => {
@@ -57,22 +118,37 @@ export default function ResultsSummary({ data }: { data: AppData }) {
 
   const resultsByCatSub = useMemo(() => {
     if (!data.categories) return {};
-    const presentationAggregates: Record<string, { total: number; count: number; type: string; subCategoryId: string }> = {};
+    const presentationAggregates: Record<string, { total: number; count: number; type: string; subCategoryId: string; maxScore: number }> = {};
     scores.forEach((s) => {
       if (!presentationAggregates[s.presentationTitle]) {
         const lookup = presentationLookup[s.presentationTitle];
         presentationAggregates[s.presentationTitle] = {
           total: 0, count: 0, type: s.presentationType,
           subCategoryId: lookup?.subCategoryId || '',
+          maxScore: s.totalScore > 0 ? s.totalScore : 100, // Assume max score from first entry or default to 100
         };
       }
       presentationAggregates[s.presentationTitle].total += s.totalScore;
       presentationAggregates[s.presentationTitle].count += 1;
     });
-    const rankedList: RankedPresentation[] = Object.entries(presentationAggregates).map(([title, agg]) => ({
-      title, presentationType: agg.type, subCategoryId: agg.subCategoryId,
-      avgScore: agg.total / agg.count, judgeCount: agg.count,
-    }));
+    
+    // Calculate total max possible score for each subcategory
+    const subCategoryMaxScores: Record<string, number> = {};
+    data.categories.forEach((cat: Category) => {
+      (cat.subCategories || []).forEach((sub: SubCategory) => {
+        const criteria = data.scoringSettings?.[sub.id] || [];
+        subCategoryMaxScores[sub.id] = criteria.reduce((sum, c) => sum + (c.maxScore || 100), 0);
+      });
+    });
+    
+    const rankedList: RankedPresentation[] = Object.entries(presentationAggregates).map(([title, agg]) => {
+      const maxScore = subCategoryMaxScores[agg.subCategoryId] || 100;
+      const avgScoreRaw = agg.total / agg.count;
+      // Convert to percentage (0-100 scale)
+      const avgScore = maxScore > 0 ? (avgScoreRaw / maxScore) * 100 : 0;
+      return { title, presentationType: agg.type, subCategoryId: agg.subCategoryId, avgScore, judgeCount: agg.count };
+    });
+    
     const grouped: Record<string, Record<string, RankedPresentation[]>> = {};
     data.categories.forEach((cat: Category) => {
       grouped[cat.id] = {};
@@ -85,7 +161,7 @@ export default function ResultsSummary({ data }: { data: AppData }) {
       });
     });
     return grouped;
-  }, [scores, data.categories, presentationLookup]);
+  }, [scores, data.categories, presentationLookup, data.scoringSettings]);
 
   const detailData = useMemo(() => {
     if (!detailTitle || !detailType) return null;
@@ -228,6 +304,239 @@ export default function ResultsSummary({ data }: { data: AppData }) {
 
   return (
     <div className="space-y-10">
+      {/* Special Awards Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-xl shadow-lg border-2 border-purple-200">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <span className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center text-white shadow-lg">
+              <FontAwesomeIcon icon={faStar} className="text-lg" />
+            </span>
+            <h2 className="text-2xl font-bold text-gray-900">Special Awards</h2>
+          </div>
+          <button
+            onClick={() => setShowAwardForm(!showAwardForm)}
+            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:shadow-lg transition-all"
+          >
+            <FontAwesomeIcon icon={faPlus} /> Create Award
+          </button>
+        </div>
+
+        {/* Award Form */}
+        {showAwardForm && (
+          <div className="bg-white p-6 rounded-lg border border-purple-200 mb-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Award Name *</label>
+                <input
+                  type="text"
+                  value={awardForm.awardName}
+                  onChange={(e) => setAwardForm({ ...awardForm, awardName: e.target.value })}
+                  placeholder="e.g., Best Presentation, Innovation Award"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
+                <select
+                  value={awardForm.categoryId}
+                  onChange={(e) => setAwardForm({ ...awardForm, categoryId: e.target.value, subCategoryId: '', scoringCriteria: [] })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Select Category</option>
+                  {data.categories.map((cat: Category) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {awardForm.categoryId && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sub-Category *</label>
+                <select
+                  value={awardForm.subCategoryId}
+                  onChange={(e) => setAwardForm({ ...awardForm, subCategoryId: e.target.value, scoringCriteria: [] })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Select Sub-Category</option>
+                  {data.categories.find(c => c.id === awardForm.categoryId)?.subCategories.map((sub: SubCategory) => (
+                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {awardForm.subCategoryId && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Scoring Criteria (Select at least 2) *</label>
+                <p className="text-xs text-gray-500 mb-3">Select which scoring criteria to use for ranking presentations in this sub-category.</p>
+                <div className="space-y-2 bg-gray-50 p-4 rounded-lg max-h-48 overflow-y-auto border border-gray-200">
+                  {(data.scoringSettings?.[awardForm.subCategoryId] || []).length > 0 ? (
+                    (data.scoringSettings?.[awardForm.subCategoryId] || []).map((criterion: ScoringCriteria) => (
+                      <label key={criterion.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={awardForm.scoringCriteria.includes(criterion.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAwardForm({
+                                ...awardForm,
+                                scoringCriteria: [...awardForm.scoringCriteria, criterion.id]
+                              });
+                            } else {
+                              setAwardForm({
+                                ...awardForm,
+                                scoringCriteria: awardForm.scoringCriteria.filter(id => id !== criterion.id)
+                              });
+                            }
+                          }}
+                          className="rounded cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-700 font-medium">{criterion.name}</span>
+                        <span className="text-xs text-gray-500 ml-auto">(Max: {criterion.maxScore})</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-400">No scoring criteria defined for this sub-category</p>
+                  )}
+                </div>
+                {awardForm.scoringCriteria.length > 0 && (
+                  <p className="text-xs text-purple-600 mt-2 font-semibold">{awardForm.scoringCriteria.length} criteria selected</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <button
+                onClick={addSpecialAward}
+                className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+              >
+                <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Award
+              </button>
+              <button
+                onClick={() => setShowAwardForm(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Awards List */}
+        {specialAwards.length > 0 ? (
+          <div className="space-y-6">
+            {specialAwards.map((award) => {
+              const category = data.categories.find(c => c.id === award.categoryId);
+              const subCategory = category?.subCategories.find(s => s.id === award.subCategoryId);
+              
+              // Get all presentations in this sub-category
+              const presInSubCat = (data.presentations || []).filter(
+                p => p.presentationTypeId === award.categoryId && p.subCategoryId === award.subCategoryId
+              ).map(p => p.title);
+              
+              // Get scores for all presentations in this sub-category, calculated using only selected criteria
+              const presentationScores: Array<{ title: string; avgScore: number; judgeCount: number }> = [];
+              const totalMaxScore = getTotalMaxScoreForAward(award);
+              
+              presInSubCat.forEach(presTitle => {
+                const entries = scores.filter(s => s.presentationTitle?.toUpperCase() === presTitle?.toUpperCase());
+                if (entries.length > 0) {
+                  let totalScore = 0;
+                  entries.forEach(entry => {
+                    award.scoringCriteria.forEach(criteriaId => {
+                      const val = entry.scores?.[criteriaId];
+                      const numVal = typeof val === 'number' ? val : typeof val === 'string' ? parseFloat(val) : 0;
+                      totalScore += numVal;
+                    });
+                  });
+                  // Convert to percentage (0-100 scale)
+                  const avgScoreRaw = totalScore / entries.length;
+                  const avgScore = totalMaxScore > 0 ? (avgScoreRaw / totalMaxScore) * 100 : 0;
+                  presentationScores.push({ title: presTitle, avgScore, judgeCount: entries.length });
+                }
+              });
+              
+              // Sort by score descending
+              const rankedPresentations = presentationScores.sort((a, b) => b.avgScore - a.avgScore);
+              
+              // LIMIT TO TOP 3 - Change this number to display more awards (e.g., change 3 to 5 for top 5)
+              const displayAwardResults = rankedPresentations.slice(0, 3);
+              
+              return (
+                <div key={award.id} className="bg-white p-6 rounded-lg shadow-lg border-l-4 border-purple-500">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">{award.awardName}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{category?.name} • {subCategory?.name}</p>
+                      <p className="text-xs text-purple-600 font-semibold mt-2">
+                        Based on: {award.scoringCriteria.length} criteria
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeSpecialAward(award.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  </div>
+                  
+                  {rankedPresentations.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-purple-50 border-b border-gray-200">
+                            <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Rank</th>
+                            <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Presentation</th>
+                            <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Judges</th>
+                            <th className="px-3 py-2 text-right text-xs font-bold text-purple-600 uppercase tracking-wider">Score</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {displayAwardResults.map((pres, idx) => (
+                            <tr key={pres.title} className={`${idx === 0 ? 'bg-purple-50/30' : 'hover:bg-gray-50/50'} transition-colors`}>
+                              <td className="px-3 py-3">
+                                <div className="flex items-center gap-2">
+                                  {idx === 0 && <FontAwesomeIcon icon={faMedal} className="text-yellow-500" />}
+                                  {idx === 1 && <FontAwesomeIcon icon={faMedal} className="text-gray-400" />}
+                                  {idx === 2 && <FontAwesomeIcon icon={faMedal} className="text-amber-600" />}
+                                  <span className={`font-bold ${idx < 3 ? 'text-lg text-purple-600' : 'text-gray-600'}`}>
+                                    {idx + 1}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-3">
+                                <p className="font-semibold text-gray-900">{pres.title}</p>
+                              </td>
+                              <td className="px-3 py-3 text-center">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {pres.judgeCount}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-right">
+                                <span className="text-lg font-bold text-purple-600">{pres.avgScore.toFixed(2)}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center py-4 text-gray-500">No submissions yet for this award criteria</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">
+            <FontAwesomeIcon icon={faStar} className="text-4xl text-gray-300 mb-2" />
+            <p className="text-gray-500 font-medium">No special awards created yet</p>
+          </div>
+        )}
+      </div>
+
+      {/* Regular Results by Category */}
       {data.categories.map((cat: Category) => {
         const catSubs = resultsByCatSub[cat.id] || {};
         const subCategoriesWithResults = (cat.subCategories || []).filter((sub: SubCategory) => catSubs[sub.id]?.length > 0);

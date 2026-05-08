@@ -254,9 +254,9 @@ export default function PresentationsManager({ data, onSave }: { data: AppData, 
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
                 onClick={() => setExpandedId(isExpanded ? null : pres.id)}
               >
-                {/* <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-bold text-sm flex items-center justify-center">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-bold text-sm flex items-center justify-center">
                   {index + 1}
-                </span> */}
+                </span>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate text-sm">{pres.title || 'Untitled'}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
